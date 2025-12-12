@@ -27,7 +27,7 @@ export class HashChain {
     
     console.log(`🔗 Hash chain started`);
     console.log(`   Session ID: ${sessionId}`);
-    console.log(`   Genesis Hash: ${genesisHash.substring(0, 16)}...`);
+    console.log(`   Genesis Hash: ${genesisHash}`);
     
     return genesisHash;
   }

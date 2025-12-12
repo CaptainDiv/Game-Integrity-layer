@@ -6,7 +6,7 @@ import { TelemetryData, Checkpoint, GameEvent } from '../src/chain/types'; // �
 
 const SESSION_ID = 'match_' + Date.now();
 const PLAYER_ID = 'player_alice';
-const CHECKPOINT_INTERVAL = 150;
+const CHECKPOINT_INTERVAL = 300;
 
 console.log('🎮 SUI GAME INTEGRITY LAYER - SIMULATION');
 console.log('==========================================\n');
@@ -16,7 +16,7 @@ const eventBuilder = new EventBuilder(PLAYER_ID);
 const hashChain = new HashChain(CHECKPOINT_INTERVAL);
 const verifier = new LocalVerifier();
 
-telemetry.onTelemetry((data: TelemetryData) => { // ← FIXED: Added type
+telemetry.onTelemetry((data: TelemetryData) => {
   const event = eventBuilder.telemetryToEvent(data);
   if (event) {
     hashChain.addEvent(event);
@@ -33,55 +33,61 @@ const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function simulateGameplay() {
   telemetry.capturePosition({ x: 0, y: 0, z: 0 });
-  await wait(50);
+  await wait(500);
 
   telemetry.captureKeyPress('W');
   telemetry.capturePosition({ x: 10, y: 0, z: 0 });
-  await wait(50);
+  await wait(500);
 
   telemetry.capturePosition({ x: 20, y: 0, z: 0 });
-  await wait(50);
+  await wait(500);
 
   telemetry.captureMouseMove(150, 200);
-  await wait(30);
+  await wait(500);
+
+  telemetry.captureKeyPress('K');
+  await wait(500)
 
   telemetry.captureMouseClick(150, 200, 'left');
-  await wait(50);
+  await wait(500);
 
   telemetry.captureKeyPress('A');
   telemetry.capturePosition({ x: 20, y: -10, z: 0 });
-  await wait(50);
+  await wait(500);
 
   telemetry.captureMouseClick(160, 195, 'left');
-  await wait(100);
+  await wait(500);
 
   telemetry.capturePosition({ x: 30, y: -10, z: 0 });
-  await wait(50);
+  await wait(500);
 
   telemetry.capturePosition({ x: 40, y: -15, z: 0 });
-  await wait(50);
+  await wait(500);
 
   telemetry.captureKeyPress('Space');
   telemetry.capturePosition({ x: 40, y: -15, z: 5 });
-  await wait(50);
+  await wait(500);
 
   telemetry.capturePosition({ x: 45, y: -15, z: 0 });
-  await wait(50);
+  await wait(500);
 
   telemetry.captureMouseClick(170, 190, 'left');
-  await wait(50);
+  await wait(500);
 
   telemetry.captureAction('player_hit', { x: 45, y: -15, z: 0 });
-  await wait(100);
+  await wait(500);
 
   telemetry.capturePosition({ x: 40, y: -20, z: 0 });
-  await wait(50);
+  await wait(500);
+
+  telemetry.captureReload();
+  await wait(500);
 
   telemetry.capturePosition({ x: 35, y: -25, z: 0 });
-  await wait(100);
+  await wait(500);
 
   telemetry.capturePosition({ x: 30, y: -30, z: 0 });
-  await wait(50);
+  await wait(500);
 }
 
 (async () => {
@@ -179,3 +185,29 @@ async function simulateGameplay() {
   console.log('💡 This proves gameplay integrity using blockchain!');
   console.log('');
 })();
+
+
+// Manual hash chain test
+console.log('\n🧪 MANUAL HASH CHAIN TEST');
+console.log('==========================================');
+
+const { hashData, chainHash, initHash } = require('../src/utils/hash');
+
+const testSession = 'test_123';
+const genesis = initHash(testSession);
+console.log(`Genesis: ${genesis.substring(0, 16)}...`);
+
+const event1 = { type: 'MOVE', x: 10 };
+const hash1 = chainHash(genesis, event1);
+console.log(`After event 1: ${hash1.substring(0, 16)}...`);
+
+const event2 = { type: 'SHOOT', x: 20 };
+const hash2 = chainHash(hash1, event2);
+console.log(`After event 2: ${hash2.substring(0, 16)}...`);
+
+// Now modify event1 and recalculate
+const modifiedEvent1 = { type: 'MOVE', x: 999 }; // Changed!
+const tamperedHash1 = chainHash(genesis, modifiedEvent1);
+console.log(`\nTampered after event 1: ${tamperedHash1.substring(0, 16)}...`);
+console.log(`Original was:           ${hash1.substring(0, 16)}...`);
+console.log(`Match? ${tamperedHash1 === hash1 ? 'YES' : 'NO ❌'}`);

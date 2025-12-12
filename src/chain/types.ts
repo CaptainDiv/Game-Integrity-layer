@@ -12,6 +12,8 @@ export enum EventType {
   PLAYER_DEATH = 'PLAYER_DEATH',
   MOUSE_CLICK = 'MOUSE_CLICK',
   KEY_PRESS = 'KEY_PRESS',
+  PLAYER_RELOAD = 'PLAYER_RELOAD',
+  PLAYER_CROUCH = 'PLAYER_CROUCH',
 }
 
 export interface Position {

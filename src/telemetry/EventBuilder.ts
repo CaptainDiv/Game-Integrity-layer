@@ -104,6 +104,15 @@ export class EventBuilder {
       };
     }
 
+    if (telemetry.action === 'player_reload') {
+      return {
+        type: EventType.PLAYER_RELOAD,
+        timestamp: telemetry.timestamp,
+        playerId: this.playerId,
+        data: {},
+      };
+    }
+
     return {
       type: EventType.MOUSE_CLICK,
       timestamp: telemetry.timestamp,

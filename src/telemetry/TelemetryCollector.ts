@@ -59,6 +59,13 @@ export class TelemetryCollector {
     });
   }
 
+  public captureReload(): void {
+    this.emit({
+      timestamp: this.getRelativeTimestamp(),
+      action: 'player_reload',
+    });
+  }
+
   public resetSession(): void {
     this.sessionStartTime = Date.now();
   }

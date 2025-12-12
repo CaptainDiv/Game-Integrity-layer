@@ -18,7 +18,6 @@ export function chainHash(previousHash: string, newData: any): string {
 export function initHash(sessionId: string): string {
   return hashData({
     sessionId,
-    timestamp: Date.now(),
     type: 'CHAIN_INIT',
   });
 }
