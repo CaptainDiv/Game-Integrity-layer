@@ -14,6 +14,7 @@ export enum EventType {
   KEY_PRESS = 'KEY_PRESS',
   PLAYER_RELOAD = 'PLAYER_RELOAD',
   PLAYER_CROUCH = 'PLAYER_CROUCH',
+  HEALTH_CHANGE = 'HEALTH_CHANGE',
 }
 
 export interface Position {
@@ -55,4 +56,5 @@ export interface TelemetryData {
   key?: string;
   position?: Position;
   action?: string;
+  healthChange?: { oldHealth: number; newHealth: number; reason: string };
 }

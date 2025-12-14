@@ -2,18 +2,25 @@ import { TelemetryCollector } from '../src/telemetry/TelemetryCollector';
 import { EventBuilder } from '../src/telemetry/EventBuilder';
 import { HashChain } from '../src/chain/HashChain';
 import { LocalVerifier } from '../src/verification/LocalVerifier';
-import { TelemetryData, Checkpoint, GameEvent } from '../src/chain/types'; // ← IMPORTANT: Added types
+import { TelemetryData, Checkpoint, GameEvent } from '../src/chain/types';
+import { ConfigManager } from '../src/config';
+import { StatsCalculator } from '../src/utils/stats';
 
 const SESSION_ID = 'match_' + Date.now();
 const PLAYER_ID = 'player_alice';
-const CHECKPOINT_INTERVAL = 300;
 
 console.log('🎮 SUI GAME INTEGRITY LAYER - SIMULATION');
 console.log('==========================================\n');
 
+const config = new ConfigManager({
+  checkpointInterval: 100,
+  movementThreshold: 10,
+});
+
 const telemetry = new TelemetryCollector();
 const eventBuilder = new EventBuilder(PLAYER_ID);
-const hashChain = new HashChain(CHECKPOINT_INTERVAL);
+eventBuilder.setMovementThreshold(config.movementThreshold);
+const hashChain = new HashChain(config.checkpointInterval);
 const verifier = new LocalVerifier();
 
 telemetry.onTelemetry((data: TelemetryData) => {
@@ -46,7 +53,7 @@ async function simulateGameplay() {
   await wait(500);
 
   telemetry.captureKeyPress('K');
-  await wait(500)
+  await wait(500);
 
   telemetry.captureMouseClick(150, 200, 'left');
   await wait(500);
@@ -77,6 +84,12 @@ async function simulateGameplay() {
   telemetry.captureAction('player_hit', { x: 45, y: -15, z: 0 });
   await wait(500);
 
+  telemetry.captureHealthChange(100, 75, 'enemy_bullet');
+  await wait(50);
+
+  telemetry.captureHealthChange(75, 50, 'fall_damage');
+  await wait(55);
+
   telemetry.capturePosition({ x: 40, y: -20, z: 0 });
   await wait(500);
 
@@ -90,6 +103,9 @@ async function simulateGameplay() {
   await wait(500);
 }
 
+// ============================================
+// RUN SIMULATION
+// ============================================
 (async () => {
   await simulateGameplay();
 
@@ -109,10 +125,18 @@ async function simulateGameplay() {
   console.log(`Duration:         ${stats?.uptime}ms`);
   console.log('');
 
+  // ✅ NOW 'checkpoints' is defined here
   const checkpoints = hashChain.getCheckpoints();
+  
+  // ✅ MOVED: Use StatsCalculator here (after checkpoints is defined)
+  console.log('📈 DETAILED STATISTICS');
+  console.log('==========================================');
+  const detailedStats = StatsCalculator.calculateStats(checkpoints);
+  StatsCalculator.printStats(detailedStats);
+
   console.log('📦 CHECKPOINTS');
   console.log('==========================================');
-  checkpoints.forEach((cp: Checkpoint) => { // ← FIXED: Added type
+  checkpoints.forEach((cp: Checkpoint) => {
     console.log(`Checkpoint #${cp.index}:`);
     console.log(`  Events:       ${cp.events.length}`);
     console.log(`  Hash:         ${cp.hash.substring(0, 32)}...`);
@@ -124,7 +148,7 @@ async function simulateGameplay() {
   const allEvents = hashChain.getAllEvents();
   console.log('🎯 SAMPLE EVENTS');
   console.log('==========================================');
-  allEvents.slice(0, 5).forEach((event: GameEvent, i: number) => { // ← FIXED: Added types
+  allEvents.slice(0, 5).forEach((event: GameEvent, i: number) => {
     console.log(`Event ${i + 1}:`);
     console.log(`  Type:         ${event.type}`);
     console.log(`  Timestamp:    ${event.timestamp}ms`);
@@ -174,7 +198,34 @@ async function simulateGameplay() {
     console.log('');
   }
 
-  console.log('✨ NEXT STEPS (Week 2)');
+  // ============================================
+  // MANUAL HASH CHAIN TEST
+  // ============================================
+  console.log('\n🧪 MANUAL HASH CHAIN TEST');
+  console.log('==========================================');
+
+  const { hashData, chainHash, initHash } = require('../src/utils/hash');
+
+  const testSession = 'test_123';
+  const genesis = initHash(testSession);
+  console.log(`Genesis: ${genesis.substring(0, 16)}...`);
+
+  const event1 = { type: 'MOVE', x: 10 };
+  const hash1 = chainHash(genesis, event1);
+  console.log(`After event 1: ${hash1.substring(0, 16)}...`);
+
+  const event2 = { type: 'SHOOT', x: 20 };
+  const hash2 = chainHash(hash1, event2);
+  console.log(`After event 2: ${hash2.substring(0, 16)}...`);
+
+  // Now modify event1 and recalculate
+  const modifiedEvent1 = { type: 'MOVE', x: 999 }; // Changed!
+  const tamperedHash1 = chainHash(genesis, modifiedEvent1);
+  console.log(`\nTampered after event 1: ${tamperedHash1.substring(0, 16)}...`);
+  console.log(`Original was:           ${hash1.substring(0, 16)}...`);
+  console.log(`Match? ${tamperedHash1 === hash1 ? 'YES' : 'NO ❌'}`);
+
+  console.log('\n✨ NEXT STEPS (Week 2)');
   console.log('==========================================');
   console.log('1. Sign checkpoints with client private key');
   console.log('2. Send checkpoints to relay server');
@@ -185,29 +236,3 @@ async function simulateGameplay() {
   console.log('💡 This proves gameplay integrity using blockchain!');
   console.log('');
 })();
-
-
-// Manual hash chain test
-console.log('\n🧪 MANUAL HASH CHAIN TEST');
-console.log('==========================================');
-
-const { hashData, chainHash, initHash } = require('../src/utils/hash');
-
-const testSession = 'test_123';
-const genesis = initHash(testSession);
-console.log(`Genesis: ${genesis.substring(0, 16)}...`);
-
-const event1 = { type: 'MOVE', x: 10 };
-const hash1 = chainHash(genesis, event1);
-console.log(`After event 1: ${hash1.substring(0, 16)}...`);
-
-const event2 = { type: 'SHOOT', x: 20 };
-const hash2 = chainHash(hash1, event2);
-console.log(`After event 2: ${hash2.substring(0, 16)}...`);
-
-// Now modify event1 and recalculate
-const modifiedEvent1 = { type: 'MOVE', x: 999 }; // Changed!
-const tamperedHash1 = chainHash(genesis, modifiedEvent1);
-console.log(`\nTampered after event 1: ${tamperedHash1.substring(0, 16)}...`);
-console.log(`Original was:           ${hash1.substring(0, 16)}...`);
-console.log(`Match? ${tamperedHash1 === hash1 ? 'YES' : 'NO ❌'}`);

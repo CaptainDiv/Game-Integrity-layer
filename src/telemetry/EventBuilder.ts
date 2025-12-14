@@ -22,11 +22,28 @@ export class EventBuilder {
       return this.createKeyEvent(telemetry);
     }
 
+    if (telemetry.healthChange) {
+      return this.createHealthChangeEvent(telemetry);
+    }
+
     if (telemetry.action) {
       return this.createActionEvent(telemetry);
     }
 
     return null;
+  }
+
+  private createHealthChangeEvent(telemetry: TelemetryData): GameEvent {
+    return {
+      type: EventType.HEALTH_CHANGE,
+      timestamp: telemetry.timestamp,
+      playerId: this.playerId,
+      data: {
+        oldHealth: telemetry.healthChange!.oldHealth,
+        newHealth: telemetry.healthChange!.newHealth,
+        reason: telemetry.healthChange!.reason,
+      },
+    };
   }
 
   private createShootEvent(telemetry: TelemetryData): GameEvent {

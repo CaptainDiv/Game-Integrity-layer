@@ -163,6 +163,42 @@ export class LocalVerifier {
       }
     }
 
+        // ADD THIS CHECK:
+    console.log('\n🎯 Checking combo validity...');
+
+    let consecutiveHits = 0;
+    let lastHitTime = 0;
+    const maxComboWindow = 2000; // 2 seconds
+
+    for (let i = 0; i < events.length; i++) {
+      const event = events[i];
+      
+      if (event.type === 'PLAYER_HIT') {
+        const timeSinceLastHit = event.timestamp - lastHitTime;
+        
+        if (timeSinceLastHit <= maxComboWindow) {
+          consecutiveHits++;
+          
+          // Impossible combo (no human can hit 20 times in 2 seconds)
+          if (consecutiveHits > 20) {
+            console.log(`❌ Impossible combo at event ${i}`);
+            return {
+              valid: false,
+              message: `Impossible combo detected: ${consecutiveHits} hits in ${timeSinceLastHit}ms`,
+              failedAtEvent: i,
+            };
+          }
+        } else {
+          // Combo reset
+          consecutiveHits = 1;
+        }
+        
+        lastHitTime = event.timestamp;
+      }
+    }
+
+    console.log(`✅ Max combo: ${consecutiveHits} hits`);
+
     console.log(`✅ All game rules validated`);
     return {
       valid: true,

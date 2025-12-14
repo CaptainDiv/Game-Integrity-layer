@@ -66,6 +66,13 @@ export class TelemetryCollector {
     });
   }
 
+  public captureHealthChange(oldHealth: number, newHealth: number, reason: string): void {
+    this.emit({
+      timestamp: this.getRelativeTimestamp(),
+      healthChange: { oldHealth, newHealth, reason },
+    });
+  }
+
   public resetSession(): void {
     this.sessionStartTime = Date.now();
   }

@@ -37,16 +37,38 @@ export class HashChain {
       throw new Error('Chain not started. Call startChain() first.');
     }
 
+    // ADD THESE LOGS:
+    console.log('\n--- ADD EVENT DEBUG ---');
+    console.log('Event type:', event.type);
+    console.log('Event timestamp:', event.timestamp);
+    console.log('Current hash BEFORE:', this.state.currentHash.substring(0, 16));
+    console.log('Event count BEFORE:', this.state.eventCount);
+    console.log('Pending events BEFORE:', this.state.pendingEvents.length);
+
     const newHash = chainHash(this.state.currentHash, event);
+    
+    // ADD THIS LOG:
+    console.log('New hash AFTER:', newHash.substring(0, 16));
     
     this.state.currentHash = newHash;
     this.state.eventCount++;
     this.state.pendingEvents.push(event);
 
+    // ADD THESE LOGS:
+    console.log('Event count AFTER:', this.state.eventCount);
+    console.log('Pending events AFTER:', this.state.pendingEvents.length);
+
     const timeSinceLastCheckpoint = Date.now() - this.lastCheckpointTime;
+    
+    // ADD THIS LOG:
+    console.log('Time since last checkpoint:', timeSinceLastCheckpoint, 'ms');
+    
     if (timeSinceLastCheckpoint >= this.checkpointInterval && this.state.pendingEvents.length > 0) {
+      console.log('🚨 CHECKPOINT TIME!');
       this.finalizeCheckpoint();
     }
+
+    console.log('--- END ADD EVENT ---\n');
 
     return newHash;
   }
