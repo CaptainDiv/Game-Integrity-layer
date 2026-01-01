@@ -5,6 +5,9 @@ import { LocalVerifier } from '../src/verification/LocalVerifier';
 import { TelemetryData, Checkpoint, GameEvent } from '../src/chain/types';
 import { ConfigManager } from '../src/config';
 import { StatsCalculator } from '../src/utils/stats';
+import { KeyManager } from '../src/signing/KeyManager';  
+import { Signer } from '../src/signing/Signer';          
+import { SignedCheckpoint } from '../src/signing/types';
 
 const SESSION_ID = 'match_' + Date.now();
 const PLAYER_ID = 'player_alice';
@@ -22,6 +25,9 @@ const eventBuilder = new EventBuilder(PLAYER_ID);
 eventBuilder.setMovementThreshold(config.movementThreshold);
 const hashChain = new HashChain(config.checkpointInterval);
 const verifier = new LocalVerifier();
+
+const keyManager = new KeyManager('./keys');
+const signer = new Signer();
 
 telemetry.onTelemetry((data: TelemetryData) => {
   const event = eventBuilder.telemetryToEvent(data);
