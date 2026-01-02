@@ -65,6 +65,8 @@ export class KeyManager {
             cipher.final()
         ]);
 
+        const authTag = cipher.getAuthTag();
+
         const encryptedWithTag = Buffer.concat([encrypted, authTag]);
 
         const KeyStorage: KeyStorage = {

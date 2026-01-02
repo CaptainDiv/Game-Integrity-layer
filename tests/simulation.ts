@@ -2,243 +2,325 @@ import { TelemetryCollector } from '../src/telemetry/TelemetryCollector';
 import { EventBuilder } from '../src/telemetry/EventBuilder';
 import { HashChain } from '../src/chain/HashChain';
 import { LocalVerifier } from '../src/verification/LocalVerifier';
-import { TelemetryData, Checkpoint, GameEvent } from '../src/chain/types';
-import { ConfigManager } from '../src/config';
+import { config } from '../src/config';
 import { StatsCalculator } from '../src/utils/stats';
-import { KeyManager } from '../src/signing/KeyManager';  
-import { Signer } from '../src/signing/Signer';          
+import { KeyManager } from '../src/signing/KeyManager';
+import { Signer } from '../src/signing/Signer';
 import { SignedCheckpoint } from '../src/signing/types';
+import * as fs from 'fs';
+
+/**
+ * SUI GAME INTEGRITY LAYER - COMPLETE SIMULATION
+ * 
+ * Week 1: Hash Chain + Local Verification
+ * Week 2: Ed25519 Signing + Server Ready
+ */
 
 const SESSION_ID = 'match_' + Date.now();
 const PLAYER_ID = 'player_alice';
+const PASSWORD = 'demo_password_change_in_production';
 
 console.log('🎮 SUI GAME INTEGRITY LAYER - SIMULATION');
 console.log('==========================================\n');
 
-const config = new ConfigManager({
-  checkpointInterval: 100,
-  movementThreshold: 10,
-});
-
+// ===== INITIALIZE COMPONENTS =====
 const telemetry = new TelemetryCollector();
-const eventBuilder = new EventBuilder(PLAYER_ID);
-eventBuilder.setMovementThreshold(config.movementThreshold);
-const hashChain = new HashChain(config.checkpointInterval);
-const verifier = new LocalVerifier();
+const hashChain = new HashChain(config.hashChain);
+const verifier = new LocalVerifier(hashChain);
 
+// Week 2: Signing components
 const keyManager = new KeyManager('./keys');
 const signer = new Signer();
 
-telemetry.onTelemetry((data: TelemetryData) => {
-  const event = eventBuilder.telemetryToEvent(data);
-  if (event) {
-    hashChain.addEvent(event);
-  }
-});
-
-console.log('Starting hash chain...');
-const genesisHash = hashChain.startChain(SESSION_ID);
-console.log('');
-
-console.log('📡 Simulating gameplay...\n');
-
+// ===== EVENT GENERATION HELPER =====
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+/**
+ * Simulate realistic gameplay
+ */
 async function simulateGameplay() {
-  telemetry.capturePosition({ x: 0, y: 0, z: 0 });
-  await wait(500);
+  console.log('📡 Simulating gameplay...\n');
 
-  telemetry.captureKeyPress('W');
-  telemetry.capturePosition({ x: 10, y: 0, z: 0 });
-  await wait(500);
+  // Event 1: Player spawns
+  const spawnEvent = EventBuilder.playerAction(PLAYER_ID, 'spawn', { x: 0, y: 0, z: 0 });
+  telemetry.recordEvent(spawnEvent);
+  hashChain.addEvent(spawnEvent);
+  console.log('✓ Player spawned at (0, 0, 0)');
+  await wait(150);
 
-  telemetry.capturePosition({ x: 20, y: 0, z: 0 });
-  await wait(500);
+  // Event 2: Player moves forward
+  const moveEvent1 = EventBuilder.playerAction(PLAYER_ID, 'move', { x: 10, y: 0, z: 0 });
+  telemetry.recordEvent(moveEvent1);
+  hashChain.addEvent(moveEvent1);
+  console.log('✓ Player moved to (10, 0, 0)');
+  await wait(150);
 
-  telemetry.captureMouseMove(150, 200);
-  await wait(500);
+  // Event 3: Player moves again
+  const moveEvent2 = EventBuilder.playerAction(PLAYER_ID, 'move', { x: 20, y: 0, z: 0 });
+  telemetry.recordEvent(moveEvent2);
+  hashChain.addEvent(moveEvent2);
+  console.log('✓ Player moved to (20, 0, 0)');
+  await wait(150);
 
-  telemetry.captureKeyPress('K');
-  await wait(500);
+  // Event 4: Game state update
+  const stateEvent1 = EventBuilder.gameState('combat', { enemiesAlive: 5, playerHealth: 100 });
+  telemetry.recordEvent(stateEvent1);
+  hashChain.addEvent(stateEvent1);
+  console.log('✓ Combat state: 5 enemies alive');
+  await wait(150);
 
-  telemetry.captureMouseClick(150, 200, 'left');
-  await wait(500);
+  // Event 5: Player shoots
+  const shootEvent = EventBuilder.playerAction(PLAYER_ID, 'shoot', { target: 'enemy_1', weapon: 'rifle' });
+  telemetry.recordEvent(shootEvent);
+  hashChain.addEvent(shootEvent);
+  console.log('✓ Player shot at enemy_1');
+  await wait(150);
 
-  telemetry.captureKeyPress('A');
-  telemetry.capturePosition({ x: 20, y: -10, z: 0 });
-  await wait(500);
+  // Event 6: Player strafes left
+  const strafeEvent = EventBuilder.playerAction(PLAYER_ID, 'move', { x: 20, y: -10, z: 0 });
+  telemetry.recordEvent(strafeEvent);
+  hashChain.addEvent(strafeEvent);
+  console.log('✓ Player strafed to (20, -10, 0)');
+  await wait(150);
 
-  telemetry.captureMouseClick(160, 195, 'left');
-  await wait(500);
+  // Event 7: Player takes damage
+  const damageEvent = EventBuilder.playerAction(PLAYER_ID, 'take_damage', { amount: 25, source: 'enemy_bullet' });
+  telemetry.recordEvent(damageEvent);
+  hashChain.addEvent(damageEvent);
+  console.log('✓ Player took 25 damage');
+  await wait(150);
 
-  telemetry.capturePosition({ x: 30, y: -10, z: 0 });
-  await wait(500);
+  // Event 8: Game state update
+  const stateEvent2 = EventBuilder.gameState('combat', { enemiesAlive: 4, playerHealth: 75 });
+  telemetry.recordEvent(stateEvent2);
+  hashChain.addEvent(stateEvent2);
+  console.log('✓ Combat state: 4 enemies alive, player at 75 HP');
+  await wait(150);
 
-  telemetry.capturePosition({ x: 40, y: -15, z: 0 });
-  await wait(500);
+  // Event 9: Player collects item
+  const collectEvent = EventBuilder.playerAction(PLAYER_ID, 'collect', { item: 'health_pack' });
+  telemetry.recordEvent(collectEvent);
+  hashChain.addEvent(collectEvent);
+  console.log('✓ Player collected health pack');
+  await wait(150);
 
-  telemetry.captureKeyPress('Space');
-  telemetry.capturePosition({ x: 40, y: -15, z: 5 });
-  await wait(500);
+  // Event 10: Player heals
+  const healEvent = EventBuilder.playerAction(PLAYER_ID, 'heal', { amount: 25 });
+  telemetry.recordEvent(healEvent);
+  hashChain.addEvent(healEvent);
+  console.log('✓ Player healed 25 HP');
+  await wait(150);
 
-  telemetry.capturePosition({ x: 45, y: -15, z: 0 });
-  await wait(500);
+  // Event 11: Player jumps
+  const jumpEvent = EventBuilder.playerAction(PLAYER_ID, 'jump', { x: 20, y: -10, z: 5 });
+  telemetry.recordEvent(jumpEvent);
+  hashChain.addEvent(jumpEvent);
+  console.log('✓ Player jumped');
+  await wait(150);
 
-  telemetry.captureMouseClick(170, 190, 'left');
-  await wait(500);
+  // Event 12: Player reloads
+  const reloadEvent = EventBuilder.playerAction(PLAYER_ID, 'reload', { weapon: 'rifle' });
+  telemetry.recordEvent(reloadEvent);
+  hashChain.addEvent(reloadEvent);
+  console.log('✓ Player reloaded weapon');
+  await wait(150);
 
-  telemetry.captureAction('player_hit', { x: 45, y: -15, z: 0 });
-  await wait(500);
-
-  telemetry.captureHealthChange(100, 75, 'enemy_bullet');
-  await wait(50);
-
-  telemetry.captureHealthChange(75, 50, 'fall_damage');
-  await wait(55);
-
-  telemetry.capturePosition({ x: 40, y: -20, z: 0 });
-  await wait(500);
-
-  telemetry.captureReload();
-  await wait(500);
-
-  telemetry.capturePosition({ x: 35, y: -25, z: 0 });
-  await wait(500);
-
-  telemetry.capturePosition({ x: 30, y: -30, z: 0 });
-  await wait(500);
+  console.log('\n✓ Gameplay simulation complete\n');
 }
 
-// ============================================
-// RUN SIMULATION
-// ============================================
-(async () => {
-  await simulateGameplay();
+/**
+ * Main simulation flow
+ */
+async function runSimulation() {
+  try {
+    // ===== WEEK 2: KEY MANAGEMENT =====
+    console.log('🔑 WEEK 2: KEY MANAGEMENT');
+    console.log('==========================================\n');
 
-  console.log('\n📦 Creating final checkpoint...');
-  const finalCheckpoint = hashChain.forceCheckpoint();
-  if (finalCheckpoint) {
-    console.log(`Final checkpoint #${finalCheckpoint.index} created\n`);
-  }
-
-  const stats = hashChain.getStats();
-  console.log('📊 SESSION STATISTICS');
-  console.log('==========================================');
-  console.log(`Session ID:       ${stats?.sessionId}`);
-  console.log(`Total Events:     ${stats?.totalEvents}`);
-  console.log(`Checkpoints:      ${stats?.checkpointsCreated}`);
-  console.log(`Final Hash:       ${stats?.currentHash.substring(0, 32)}...`);
-  console.log(`Duration:         ${stats?.uptime}ms`);
-  console.log('');
-
-  // ✅ NOW 'checkpoints' is defined here
-  const checkpoints = hashChain.getCheckpoints();
-  
-  // ✅ MOVED: Use StatsCalculator here (after checkpoints is defined)
-  console.log('📈 DETAILED STATISTICS');
-  console.log('==========================================');
-  const detailedStats = StatsCalculator.calculateStats(checkpoints);
-  StatsCalculator.printStats(detailedStats);
-
-  console.log('📦 CHECKPOINTS');
-  console.log('==========================================');
-  checkpoints.forEach((cp: Checkpoint) => {
-    console.log(`Checkpoint #${cp.index}:`);
-    console.log(`  Events:       ${cp.events.length}`);
-    console.log(`  Hash:         ${cp.hash.substring(0, 32)}...`);
-    console.log(`  Previous:     ${cp.previousHash.substring(0, 32)}...`);
-    console.log(`  Timestamp:    ${cp.timestamp}`);
-    console.log('');
-  });
-
-  const allEvents = hashChain.getAllEvents();
-  console.log('🎯 SAMPLE EVENTS');
-  console.log('==========================================');
-  allEvents.slice(0, 5).forEach((event: GameEvent, i: number) => {
-    console.log(`Event ${i + 1}:`);
-    console.log(`  Type:         ${event.type}`);
-    console.log(`  Timestamp:    ${event.timestamp}ms`);
-    console.log(`  Player:       ${event.playerId}`);
-    console.log(`  Data:         ${JSON.stringify(event.data)}`);
-    console.log('');
-  });
-  if (allEvents.length > 5) {
-    console.log(`... and ${allEvents.length - 5} more events\n`);
-  }
-
-  console.log('🔐 VERIFICATION');
-  console.log('==========================================');
-  
-  const result = verifier.fullVerification(checkpoints, SESSION_ID);
-  
-  console.log('\n📋 VERIFICATION RESULT');
-  console.log('==========================================');
-  console.log(`Status:  ${result.valid ? '✅ VALID' : '❌ INVALID'}`);
-  console.log(`Message: ${result.message}`);
-  console.log('');
-
-  console.log('🔓 TAMPER TEST');
-  console.log('==========================================');
-  console.log('What happens if we modify an event?\n');
-
-  const tamperedCheckpoints = JSON.parse(JSON.stringify(checkpoints));
-  
-  if (tamperedCheckpoints[0].events.length > 0) {
-    const originalEvent = { ...tamperedCheckpoints[0].events[0] };
-    tamperedCheckpoints[0].events[0].data.position = { x: 9999, y: 9999, z: 9999 };
+    let keypair;
+    if (keyManager.keypairExists()) {
+      console.log('Loading existing keypair...');
+      keypair = await keyManager.loadKeypair(PASSWORD);
+      console.log('✓ Keypair loaded');
+    } else {
+      console.log('Generating new Ed25519 keypair...');
+      keypair = keyManager.generateKeypair();
+      await keyManager.saveKeypair(keypair, PASSWORD);
+      console.log('✓ Keypair generated and encrypted');
+    }
     
-    console.log('Original event:');
-    console.log(`  ${JSON.stringify(originalEvent)}`);
-    console.log('');
-    console.log('Tampered event:');
-    console.log(`  ${JSON.stringify(tamperedCheckpoints[0].events[0])}`);
-    console.log('');
-    
-    console.log('Verifying tampered chain...');
-    const tamperedResult = verifier.fullVerification(tamperedCheckpoints, SESSION_ID);
-    
-    console.log('\n📋 TAMPERED CHAIN RESULT');
+    console.log(`Public Key: ${keypair.publicKey.toString('hex').substring(0, 32)}...\n`);
+
+    // ===== WEEK 1: GAMEPLAY SIMULATION =====
+    await simulateGameplay();
+
+    // ===== WEEK 1: STATISTICS =====
+    console.log('📊 SESSION STATISTICS');
     console.log('==========================================');
-    console.log(`Status:  ${tamperedResult.valid ? '✅ VALID' : '❌ INVALID (Expected!)'}`);
-    console.log(`Message: ${tamperedResult.message}`);
+    const stats = hashChain.getStats();
+    console.log(`Session ID:       ${SESSION_ID}`);
+    console.log(`Total Events:     ${stats.totalEvents}`);
+    console.log(`Checkpoints:      ${stats.checkpointsCreated}`);
+    console.log(`Chain Length:     ${hashChain.getChainLength()}`);
+    console.log(`Current Hash:     ${hashChain.getCurrentHash().substring(0, 32)}...`);
+    console.log(`Duration:         ${stats.duration}ms\n`);
+
+    // ===== WEEK 1: CHECKPOINTS =====
+    const checkpoints = hashChain.getCheckpoints();
+    console.log('📦 CHECKPOINTS');
+    console.log('==========================================');
+    checkpoints.forEach((cp, index) => {
+      console.log(`Checkpoint #${index}:`);
+      console.log(`  Chain Length: ${cp.chainLength}`);
+      console.log(`  Hash:         ${cp.hash.substring(0, 32)}...`);
+      console.log(`  Timestamp:    ${new Date(cp.timestamp).toISOString()}`);
+      console.log('');
+    });
+
+    // ===== WEEK 2: SIGN CHECKPOINTS =====
+    console.log('🔐 WEEK 2: SIGNING CHECKPOINTS');
+    console.log('==========================================\n');
+
+    const signedCheckpoints: SignedCheckpoint[] = [];
+
+    checkpoints.forEach((checkpoint, index) => {
+      const signedCheckpoint = signer.signCheckpoint(
+        checkpoint.hash,
+        keypair,
+        checkpoint.chainLength
+      );
+      signedCheckpoints.push(signedCheckpoint);
+      console.log(`✓ Checkpoint ${index} signed`);
+      console.log(`  Hash:      ${signedCheckpoint.checkpointHash.substring(0, 32)}...`);
+      console.log(`  Signature: ${signedCheckpoint.signature.substring(0, 32)}...`);
+      console.log('');
+    });
+
+    // ===== WEEK 2: VERIFY SIGNATURES =====
+    console.log('🔐 WEEK 2: SIGNATURE VERIFICATION');
+    console.log('==========================================\n');
+
+    const batchVerification = signer.verifyBatch(signedCheckpoints);
+    console.log(`Total Signed Checkpoints: ${signedCheckpoints.length}`);
+    console.log(`All Signatures Valid:     ${batchVerification.allValid ? '✅ YES' : '❌ NO'}`);
     console.log('');
+
+    batchVerification.results.forEach(result => {
+      const status = result.valid ? '✅' : '❌';
+      console.log(`  ${status} Checkpoint ${result.index}: ${result.valid ? 'VALID' : 'INVALID'}`);
+    });
+    console.log('');
+
+    // ===== WEEK 1: HASH CHAIN VERIFICATION =====
+    console.log('🔐 WEEK 1: HASH CHAIN VERIFICATION');
+    console.log('==========================================\n');
+
+    const isChainValid = verifier.verifyChain();
+    console.log(`Chain Integrity: ${isChainValid ? '✅ VALID' : '❌ INVALID'}`);
+    console.log('');
+
+    // ===== DETAILED STATISTICS =====
+    console.log('📈 DETAILED STATISTICS');
+    console.log('==========================================');
+    const detailedStats = StatsCalculator.calculateStats(checkpoints);
+    StatsCalculator.printStats(detailedStats);
+
+    // ===== TAMPER TEST =====
+    console.log('\n🔓 TAMPER TEST');
+    console.log('==========================================');
+    console.log('Testing what happens if we modify checkpoint data...\n');
+
+    if (signedCheckpoints.length > 0) {
+      // Create tampered checkpoint
+      const tamperedCheckpoint = { ...signedCheckpoints[0] };
+      tamperedCheckpoint.checkpointHash = 'f'.repeat(64); // Change hash
+
+      console.log('Original checkpoint hash:');
+      console.log(`  ${signedCheckpoints[0].checkpointHash.substring(0, 32)}...`);
+      console.log('\nTampered checkpoint hash:');
+      console.log(`  ${tamperedCheckpoint.checkpointHash.substring(0, 32)}...`);
+      console.log('');
+
+      const tamperedValid = signer.verifySignature(tamperedCheckpoint);
+      console.log(`Tampered checkpoint signature valid? ${tamperedValid ? '✅ YES (Unexpected!)' : '❌ NO (Expected!)'}`);
+      console.log('');
+
+      if (!tamperedValid) {
+        console.log('✓ Tamper detection working correctly!');
+        console.log('  The signature verification caught the modified hash.\n');
+      }
+    }
+
+    // ===== OUTPUT FILES =====
+    console.log('💾 SAVING OUTPUT FILES');
+    console.log('==========================================\n');
+
+    // Week 1 Output
+    const week1Output = {
+      sessionId: SESSION_ID,
+      playerId: PLAYER_ID,
+      chainLength: hashChain.getChainLength(),
+      chainValid: isChainValid,
+      stats: stats,
+      checkpoints: checkpoints.map(cp => ({
+        chainLength: cp.chainLength,
+        hash: cp.hash,
+        timestamp: cp.timestamp
+      }))
+    };
+
+    fs.writeFileSync(
+      'output_week1.json',
+      JSON.stringify(week1Output, null, 2)
+    );
+    console.log('✓ Week 1 output saved: output_week1.json');
+
+    // Week 2 Output
+    const week2Output = {
+      sessionId: SESSION_ID,
+      playerId: PLAYER_ID,
+      publicKey: keypair.publicKey.toString('hex'),
+      signedCheckpoints: signedCheckpoints,
+      verification: {
+        allSignaturesValid: batchVerification.allValid,
+        chainValid: isChainValid,
+        timestamp: Date.now()
+      }
+    };
+
+    fs.writeFileSync(
+      'output_week2.json',
+      JSON.stringify(week2Output, null, 2)
+    );
+    console.log('✓ Week 2 output saved: output_week2.json\n');
+
+    // ===== SUMMARY =====
+    console.log('📋 SIMULATION SUMMARY');
+    console.log('==========================================');
+    console.log(`Session ID:            ${SESSION_ID}`);
+    console.log(`Events Generated:      ${stats.totalEvents}`);
+    console.log(`Checkpoints Created:   ${checkpoints.length}`);
+    console.log(`Checkpoints Signed:    ${signedCheckpoints.length}`);
+    console.log(`Chain Integrity:       ${isChainValid ? '✅ VALID' : '❌ INVALID'}`);
+    console.log(`Signatures Valid:      ${batchVerification.allValid ? '✅ VALID' : '❌ INVALID'}`);
+    console.log(`Duration:              ${stats.duration}ms`);
+    console.log('');
+
+    console.log('✨ NEXT STEPS (Week 2 - Server)');
+    console.log('==========================================');
+    console.log('1. ✓ Sign checkpoints with Ed25519 (DONE)');
+    console.log('2. → Build relay server with signature verification');
+    console.log('3. → Submit signed checkpoints to server');
+    console.log('4. → Server verifies and stores in database');
+    console.log('');
+    console.log('Week 3: Submit to Sui blockchain! 🚀');
+    console.log('');
+
+  } catch (error) {
+    console.error('❌ Simulation failed:', error);
+    process.exit(1);
   }
+}
 
-  // ============================================
-  // MANUAL HASH CHAIN TEST
-  // ============================================
-  console.log('\n🧪 MANUAL HASH CHAIN TEST');
-  console.log('==========================================');
-
-  const { hashData, chainHash, initHash } = require('../src/utils/hash');
-
-  const testSession = 'test_123';
-  const genesis = initHash(testSession);
-  console.log(`Genesis: ${genesis.substring(0, 16)}...`);
-
-  const event1 = { type: 'MOVE', x: 10 };
-  const hash1 = chainHash(genesis, event1);
-  console.log(`After event 1: ${hash1.substring(0, 16)}...`);
-
-  const event2 = { type: 'SHOOT', x: 20 };
-  const hash2 = chainHash(hash1, event2);
-  console.log(`After event 2: ${hash2.substring(0, 16)}...`);
-
-  // Now modify event1 and recalculate
-  const modifiedEvent1 = { type: 'MOVE', x: 999 }; // Changed!
-  const tamperedHash1 = chainHash(genesis, modifiedEvent1);
-  console.log(`\nTampered after event 1: ${tamperedHash1.substring(0, 16)}...`);
-  console.log(`Original was:           ${hash1.substring(0, 16)}...`);
-  console.log(`Match? ${tamperedHash1 === hash1 ? 'YES' : 'NO ❌'}`);
-
-  console.log('\n✨ NEXT STEPS (Week 2)');
-  console.log('==========================================');
-  console.log('1. Sign checkpoints with client private key');
-  console.log('2. Send checkpoints to relay server');
-  console.log('3. Relay posts checkpoints to Sui blockchain');
-  console.log('4. Smart contract stores checkpoint hashes');
-  console.log('5. Anyone can verify against on-chain data');
-  console.log('');
-  console.log('💡 This proves gameplay integrity using blockchain!');
-  console.log('');
-})();
+// ===== RUN SIMULATION =====
+runSimulation().catch(console.error);
